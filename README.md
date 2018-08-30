@@ -95,11 +95,42 @@ and the behavior is controlled with ```KEEP_LOOPING``` flag.
 
 ### DBW Node
 
+##### Description
+
+Test vehicle will be controlled with drive by wire system, which electronically controls throttle, brake and steering. DBW node implements logic to accept target linear and angular velocities and publish throttle, brake, and steering commands to respective topics.
+In addition, DBW node outputs can also be turned off and the control can be transferred to the driver using a dedicated flag.
+
+
+##### Inputs and outputs
+
 This "drive-by-wire" node subscribes to `/twist_cmd` message which provides the proposed linear and angular velocities.
 
 ![](https://d17h27t6h515a5.cloudfront.net/topher/2017/August/598d32e7_dbw-node-ros-graph/dbw-node-ros-graph.png)
 
-Using these velocities, the node calculates throttle, brake and steering commands and publishes them to the vehicle.
+
+The inputs to the DBW node are following topics:
+
+- **/twist_cmd:**
+Twist commands are published by the waypoint follower node. DBW node subscribes to this topic and produces the required output in terms of throttle, brake, and steering commands.
+
+- **/current_velocity:**
+This is published by the simulator in our case and used by DBW node to determine the linear velocity of the car and provide it to the controller
+
+- **/vehicle/dbw_enabled:**
+This is a status of DBW electronic system that is also published by the simulator in our case. DBW node will use this status to determine whether the brake, throttle and steering are to be published to respective topics or not
+
+Outputs from the DBW node are the throttle, brake and steering commands published to the throttle_cmd, brake_cmd and steering_cmd topics.
+
+##### Implementation
+Implementation of DBW node is fairly straightforward.
+DBW node subscribes to the required topics. In our case, we have subscribed to ```twist_cmd```, ```current_velocity``` and ```/vehicle/dbw_enabled``` topics:
+
+```
+rospy.Subscriber('/vehicle/dbw_enabled', Bool, self.dbw_enabled_cb)
+rospy.Subscriber('/twist_cmd',TwistStamped, self.twist_cb)
+rospy.Subscriber('/current_velocity', TwistStamped, self.velocity_cb)
+```
+The internal logic in DBW node extracts the necessary information from the twist command and current velocity messages. Such as linear and angular velocity. And publishes to respective topic using ```publish``` method as follows:
 
 ```
 self.steer_pub = rospy.Publisher('/vehicle/steering_cmd',SteeringCmd, queue_size=1)

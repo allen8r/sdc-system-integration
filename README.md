@@ -138,19 +138,55 @@ self.throttle_pub = rospy.Publisher('/vehicle/throttle_cmd',ThrottleCmd, queue_s
 self.brake_pub = rospy.Publisher('/vehicle/brake_cmd',BrakeCmd, queue_size=1)
 ```
 
-### Twist Controller
 
-This controller calculates throttle, braking and steering. The throttle is controlled with the PID controller (pid.py) . The steering angle is calculated using the YawController (yaw_controller.py)
+### Traffic Light Detection and Classification
 
-### Traffic Light Classifier
+##### Description
+The perception block consists of Obstacle Detection and Traffic Light Detection node. For the purpose of this project, we're only considering traffic lights as obstacles.
+Traffic Light Detection node takes in data from the ```/image_color```, ```/current_pose```, and ```/base_waypoints``` topics and publishes the locations to stop for red traffic lights to the ```/traffic_waypoint``` topic. As mentioned earlier, Waypoint Updater node will make use of this information to determine vehicle velocity for given waypoints.
+The traffic light classifier node is implemented separately and is independent of the Traffic light Detection node, which implements the logic to publish information regarding where the vehicle should come to a stop.
 
-This node takes in data from the `/image_color`, `/current_pose`, and `/base_waypoints` topics and publishes the locations to stop for red traffic lights to the `/traffic_waypoint` topic.
+##### Inputs and Outputs
+
+The inputs and outputs to Traffic Light Detection node are shown below:
+
+![](https://d17h27t6h515a5.cloudfront.net/topher/2017/September/59b6d189_tl-detector-ros-graph/tl-detector-ros-graph.png)
+
+The inputs to Traffic Light Detection node are:
+
+- **/base_waypoints:**
+Provides the complete list of waypoints for the course. This is the same list as the list used by Waypoint Updater node and is sent only once at initialization.
+
+- **/image_color:**
+This topic  provides an image stream from the car's camera. These images are used to determine the color of upcoming traffic lights by traffic light classifier node.
+
+- **/current_pose:**
+Traffic Light Detection node will receive this information from the simulator (or car's localization block in real world scenario) to determine the current position of the car.
 
 
+The output of Traffic Light Detection node is:
+
+- **/traffic_waypoint:**
+This is the topic to which Traffic Light detection node will publish the index of the waypoint for nearest upcoming red light's stop line. This will be used as an input by waypoint updater node.
+
+##### Implementation
+
+There are two tasks that are performed by traffic light detection node:
+1. Use the vehicle's location and the ```(x, y)``` coordinates for traffic lights to find the nearest visible traffic light ahead of the vehicle. This takes place in the ```process_traffic_lights``` method of ```tl_detector.py```. To find the closest waypoints to the vehicle and lights, ```get_closest_waypoint``` method is used.
+Using these waypoint indices, we determine which light is ahead of the vehicle along the list of waypoints.
+
+2. Use the camera image data to classify the color of the traffic light. The core functionality of this step takes place in the ```get_light_state``` method of ```tl_detector.py```.
+In order to train the classifier we have utilized [Tensorflow Object Detection API](https://github.com/tensorflow/models/tree/master/research/object_detection).
+Detailed information about setup, training method is provided by @allen8r here: ```<project path>/src/master/ros/src/tl_detector/docs/training_the_classifiers.md```
+A python notebook with proof of concept for the classifier is provided by @allen8r here: ```<project path>/src/master/ros/src/tl_detector/poc/obj_traffic_light_hybrid_detector.ipynb```
 
 
+***
+***
+***
+***
 
-___
+## Original Setup and Installation Instructions
 
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
 
